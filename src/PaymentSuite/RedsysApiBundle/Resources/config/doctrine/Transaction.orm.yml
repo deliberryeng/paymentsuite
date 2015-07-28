@@ -1,0 +1,45 @@
+PaymentSuite\RedsysApiBundle\Entity\Transaction:
+    type: entity
+    repositoryClass: PaymentSuite\RedsysApiBundle\Repository\TransactionRepository
+    table: redsys_api_transaction
+    id:
+        id:
+            type: integer
+            generator:
+                strategy: AUTO
+
+    indexes:
+        redsys_api_order_id_idx:
+            columns: [ order_id ]
+
+    fields:
+        orderId:
+            column: order_id
+            type: string
+            length: 32
+            nullable: false
+        amount:
+            column: amount
+            type: integer
+        transactionType:
+            column: transaction_type
+            type: smallint
+            nullable: false
+        returnCode:
+            column: return_code
+            type: string
+            length: 16
+        errorCode:
+            column: error_code
+            type: string
+            length: 16
+        authorizationCode:
+            column: authorization_code
+            type: string
+            length: 10
+        message:
+            column: message
+            type: text
+        createdAt:
+            column: created_at
+            type: datetime
