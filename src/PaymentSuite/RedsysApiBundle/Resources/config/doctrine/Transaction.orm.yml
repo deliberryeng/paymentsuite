@@ -11,6 +11,8 @@ PaymentSuite\RedsysApiBundle\Entity\Transaction:
     indexes:
         redsys_api_order_id_idx:
             columns: [ order_id ]
+        redsys_api_redsys_order_id_idx:
+            columns: [ redsys_unique_transaction_id ]
         redsys_api_authorization_code_idx:
             columns: [ authorization_code ]
         redsys_api_return_code_idx:
@@ -19,6 +21,11 @@ PaymentSuite\RedsysApiBundle\Entity\Transaction:
     fields:
         orderId:
             column: order_id
+            type: string
+            length: 32
+            nullable: false
+        redsysUniqueTransactionId:
+            column: redsys_unique_transaction_id
             type: string
             length: 32
             nullable: false

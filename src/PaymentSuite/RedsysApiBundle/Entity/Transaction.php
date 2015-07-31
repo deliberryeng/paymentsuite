@@ -25,6 +25,19 @@ class Transaction
     /**
      * @var string
      *
+     * Order id as seen from the payment processor.
+     * This needs to be a different field than the
+     * orderId since this particular provider (RedSys)
+     * does not allow the same <DS_ORDERID> value for
+     * different transaction, event for failed one.
+     * In short, RedSys sees <DS_ORDERID> as a
+     * UNIQUE TRANSACTION ID
+     */
+    protected $redsysUniqueTransactionId;
+
+    /**
+     * @var string
+     *
      * Order if from the payment client
      */
     protected $orderId;
@@ -90,6 +103,7 @@ class Transaction
      */
     function __construct(
         $orderId,
+        $redsysUniqueTransactionId,
         $amount,
         $transactionType,
         $returnCode,
@@ -98,6 +112,7 @@ class Transaction
         $message)
     {
         $this->orderId = $orderId;
+        $this->redsysUniqueTransactionId = $redsysUniqueTransactionId;
         $this->amount = $amount;
         $this->transactionType = $transactionType;
         $this->returnCode = $returnCode;
@@ -108,13 +123,20 @@ class Transaction
         $this->createdAt = new \DateTime();
     }
 
-
     /**
      * @return string
      */
     public function getOrderId()
     {
         return $this->orderId;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRedsysUniqueTransactionId()
+    {
+        return $this->redsysUniqueTransactionId;
     }
 
     /**

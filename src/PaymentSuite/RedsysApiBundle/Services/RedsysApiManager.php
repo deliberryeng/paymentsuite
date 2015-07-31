@@ -179,11 +179,23 @@ class RedsysApiManager
     );
 
     /**
-     * Transaction types
+     * Internal Transaction types. We need to differentiate
+     * among them since the base XML message and the fields
+     * required for the signature are different for each of
+     * them.
+     *
+     * 'payment' can be use to create and sign a XML message
+     * for the 'A' and '1' Redsys DS_MERCHANT_TRANSACTIONTYPE
+     * (auth+capture, only auth)
+     *
+     * 'capture' should be used to capture a previously authorized
+     * transaction, DS_MERCHANT_TRANSACTIONTYPE = 2
+     *
+     * 'refund' is for DS_MERCHANT_TRANSACTIONTYPE = 3
      */
     const PAYMENT = 'payment';
-
     const REFUND = 'refund';
+    const CAPTURE = 'capture';
 
     /**
      * @var string
@@ -208,9 +220,26 @@ EOL;
     /**
      * @var string
      *
-     * Refund XML templete message
+     * Refund XML template message
      */
     const REFUND_MESSAGE = <<<'EOL'
+<DATOSENTRADA>
+    <DS_MERCHANT_AMOUNT>%s</DS_MERCHANT_AMOUNT>
+    <DS_MERCHANT_ORDER>%s</DS_MERCHANT_ORDER>
+    <DS_MERCHANT_MERCHANTCODE>%s</DS_MERCHANT_MERCHANTCODE>
+    <DS_MERCHANT_CURRENCY>%s</DS_MERCHANT_CURRENCY>
+    <DS_MERCHANT_TRANSACTIONTYPE>%s</DS_MERCHANT_TRANSACTIONTYPE>
+    <DS_MERCHANT_TERMINAL>%s</DS_MERCHANT_TERMINAL>
+    <DS_MERCHANT_MERCHANTSIGNATURE>%s</DS_MERCHANT_MERCHANTSIGNATURE>
+</DATOSENTRADA>
+EOL;
+
+    /**
+     * @var string
+     *
+     * Payment capture XML template message
+     */
+    const CAPTURE_MESSAGE = <<<'EOL'
 <DATOSENTRADA>
     <DS_MERCHANT_AMOUNT>%s</DS_MERCHANT_AMOUNT>
     <DS_MERCHANT_ORDER>%s</DS_MERCHANT_ORDER>
@@ -396,21 +425,6 @@ EOL;
                 $method
             );
 
-        $this
-            ->eventDispatcher
-            ->notifyPaymentOrderCreated(
-                $this->paymentBridge,
-                $method
-            );
-
-
-        $this
-            ->eventDispatcher
-            ->notifyPaymentOrderDone(
-                $this->paymentBridge,
-                $method
-            );
-
         if (!$this->isAuthorized($r)) {
             /**
              * The payment was not successful
@@ -426,7 +440,8 @@ EOL;
         }
 
         /*
-         * Everything is ok
+         * Everything is ok, emitting the
+         * payment.order.create event
          */
         $transaction = $this->getResponseData($r);
 
@@ -434,6 +449,33 @@ EOL;
             ->setTransactionId($transaction['DS_AUTHORISATIONCODE'])
             ->setTransactionStatus('paid')
             ->setTransactionResponse($transaction);
+
+        $this
+            ->eventDispatcher
+            ->notifyPaymentOrderCreated(
+                $this->paymentBridge,
+                $method
+            );
+
+        /*
+         * Return if we are only authorizing, meaning
+         * we don't have to fire a payment success
+         * event
+         */
+        if ($this->transactionType == '1') {
+
+            return;
+        }
+
+        /**
+         * Payment process has returned control
+         */
+        $this
+            ->eventDispatcher
+            ->notifyPaymentOrderDone(
+                $this->paymentBridge,
+                $method
+            );
 
         /**
          * Payment paid successfully
@@ -448,6 +490,85 @@ EOL;
             );
 
     }
+
+    /**
+     * Captures a previously authorized transaction.
+     * This will only work for transaction whose
+     * "transaction type" is "1" and not "A".
+     *
+     * @param $amount amount to be charged in cents
+     * @param $redsysTransactionId redsys transaction id (DS_ORDER)
+     *
+     * @throws PaymentException
+     */
+    public function captureTransaction($amount, $redsysTransactionId)
+    {
+        /*
+         * Captures a previously authorized transaction
+         */
+        $this->transactionType = 2;
+
+        $this->response = sprintf(
+            self::CAPTURE_MESSAGE,
+            $amount,
+            $redsysTransactionId,
+            $this->merchantCode,
+            $this->currency,
+            $this->transactionType,
+            $this->merchantTerminal,
+            $this->signTransaction($redsysTransactionId, $amount, self::CAPTURE)
+        );
+
+        $method = new RedsysApiMethod();
+
+        try {
+
+            $r = $this->_callSoap();
+
+        } catch (\Exception $e) {
+            /* The Soap call failed */
+            $this
+                ->eventDispatcher
+                ->notifyPaymentOrderFail(
+                    $this->paymentBridge,
+                    $method
+                );
+
+            throw new PaymentException($e->getMessage());
+        }
+
+        $this
+            ->eventDispatcher
+            ->notifyPaymentOrderDone(
+                $this->paymentBridge,
+                $method
+            );
+
+        if (!$this->isAuthorized($r)) {
+
+            $method->setTransactionResponse($this->getError($r));
+            /* Payment capture has been refused */
+            $this
+                ->eventDispatcher
+                ->notifyPaymentOrderFail(
+                    $this->paymentBridge,
+                    $method
+                );
+
+        } else {
+            /**
+             * Payment OK
+             */
+            $this
+                ->eventDispatcher
+                ->notifyPaymentOrderSuccess(
+                    $this->paymentBridge,
+                    $method
+                );
+        }
+
+    }
+
 
     /**
      * @param $resource
@@ -470,11 +591,15 @@ EOL;
             isset($transactionData['DS_AUTHORISATIONCODE'])
                 ? $transactionData['DS_AUTHORISATIONCODE'] : "";
 
+        $redsysUniqueTransactionId = isset($transactionData['DS_ORDER'])
+            ? $transactionData['DS_ORDER'] : "";
+
         /**
          * this is a RESPONSE for the moment
          */
         $transaction = new Transaction(
             $this->paymentBridge->getOrderId(),
+            $redsysUniqueTransactionId,
             $this->paymentBridge->getAmount(),
             $this->transactionType,
             $returnCode,
@@ -500,6 +625,8 @@ EOL;
 
     /**
      * @param $paymentData
+     *
+     * @return string
      */
     protected function setPayment($paymentData)
     {
@@ -520,13 +647,16 @@ EOL;
             $this->transactionType,
             $this->merchantTerminal,
             $this->expiration,
-            $this->signTransaction($redsysUniqueTransactionId)
+            $this->signTransaction($redsysUniqueTransactionId, $this->paymentBridge->getAmount())
         );
 
+        return $redsysUniqueTransactionId;
     }
 
     /**
      * @param $orderData
+     *
+     * @return string
      */
     protected function setRefund($orderData)
     {
@@ -548,10 +678,12 @@ EOL;
             $this->merchantTerminal,
             $this->signTransaction(
                 $redsysUniqueTransactionId,
+                $this->paymentBridge->getAmount(),
                 self::REFUND
             )
         );
 
+        return $redsysUniqueTransactionId;
     }
 
     /**
@@ -577,36 +709,38 @@ EOL;
      *
      * @return string
      */
-    protected function signTransaction($redsysUniqueTransactionId, $transactionType = self::PAYMENT)
+    protected function signTransaction($redsysUniqueTransactionId, $amount, $transactionType = self::PAYMENT)
     {
         $signature = "";
 
-        if ($transactionType == self::PAYMENT) {
+        switch ($transactionType) {
 
-            $signature = sprintf(
-                '%s%s%s%s%s%s%s%s',
-                $this->paymentBridge->getAmount(),
-                $redsysUniqueTransactionId,
-                $this->merchantCode,
-                $this->currency,
-                $this->number,
-                $this->cvc,
-                $this->transactionType,
-                $this->merchantSecretKey
-            );
+            case self::PAYMENT:
+                $signature = sprintf(
+                    '%s%s%s%s%s%s%s%s',
+                    $amount,
+                    $redsysUniqueTransactionId,
+                    $this->merchantCode,
+                    $this->currency,
+                    $this->number,
+                    $this->cvc,
+                    $this->transactionType,
+                    $this->merchantSecretKey
+                );
+            break;
 
-        } elseif ($transactionType == self::REFUND) {
-
-            $signature = sprintf(
-                '%s%s%s%s%s%s',
-                $this->paymentBridge->getAmount(),
-                $redsysUniqueTransactionId,
-                $this->merchantCode,
-                $this->currency,
-                $this->transactionType,
-                $this->merchantSecretKey
-            );
-
+            case self::CAPTURE:
+            case self::REFUND:
+                $signature = sprintf(
+                    '%s%s%s%s%s%s',
+                    $amount,
+                    $redsysUniqueTransactionId,
+                    $this->merchantCode,
+                    $this->currency,
+                    $this->transactionType,
+                    $this->merchantSecretKey
+                );
+            break;
         }
 
         return strtoupper(sha1($signature));

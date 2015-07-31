@@ -15,6 +15,7 @@ namespace PaymentSuite\RedsysApiBundle\Form\Type;
 
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Validator\Constraints;
 
 use PaymentSuite\PaymentCoreBundle\Services\interfaces\PaymentBridgeInterface;
 
@@ -49,9 +50,16 @@ class RedsysApiType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-            ->add('credit_cart', 'text', array(
+            ->add('credit_card', 'text', array(
                 'required' => true,
                 'max_length' => 20,
+//                'constraints' => [
+//                    new Constraints\Length(
+//                        [
+//                            'max' => 5,
+//                        ]
+//                    ),
+//                ],
             ))
             ->add('credit_cart_security', 'text', array(
                 'required' => true,
