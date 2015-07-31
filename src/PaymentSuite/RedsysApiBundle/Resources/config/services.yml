@@ -14,6 +14,7 @@ services:
             - @paymentsuite.object_manager.redsys_api_transaction
             - @paymentsuite.repository.redsys_api_transaction
             - %redsys_api.service_endpoint%
+            - %redsys_api.operation_mode%
             - %redsys_api.merchant_code%
             - %redsys_api.merchant_secret_key%
             - %redsys_api.merchant_terminal%

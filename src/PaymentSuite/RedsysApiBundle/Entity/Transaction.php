@@ -37,12 +37,22 @@ class Transaction
     protected $amount;
 
     /**
-     * @var int
+     * @var string
      *
-     * 0: Request
-     * 1: Response
+     * A – Ordinary payment
+     * 1 – Preauthorization
+     * 2 – Confirmation
+     * 3 – Automatic refund
+     * 5 – Recurring payments
+     * 6 – Successive transaction
+     * 9 – Preauthorization cancel
+     * O – Deferred authorization
+     * P - Deferred authorization confirm
+     * Q - Deferred authorization cancel
+     * R – Initial authorization recurring deferred
+     * S – Authorization successive recurring deferred
      */
-    protected $transactionType;
+    protected $transactionType = 'A';
 
     /**
      * @var string

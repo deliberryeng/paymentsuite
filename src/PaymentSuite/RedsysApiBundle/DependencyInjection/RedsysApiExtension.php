@@ -34,6 +34,7 @@ class RedsysApiExtension extends Extension
         $config = $this->processConfiguration($configuration, $configs);
 
         $container->setParameter('redsys_api.service_endpoint', $config['service_endpoint']);
+        $container->setParameter('redsys_api.operation_mode', $config['operation_mode']);
         $container->setParameter('redsys_api.merchant_code', $config['merchant_code']);
         $container->setParameter('redsys_api.merchant_secret_key', $config['merchant_secret_key']);
         $container->setParameter('redsys_api.merchant_name', $config['merchant_name']);

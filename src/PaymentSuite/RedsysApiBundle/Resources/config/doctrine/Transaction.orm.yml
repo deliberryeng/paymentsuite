@@ -11,6 +11,10 @@ PaymentSuite\RedsysApiBundle\Entity\Transaction:
     indexes:
         redsys_api_order_id_idx:
             columns: [ order_id ]
+        redsys_api_authorization_code_idx:
+            columns: [ authorization_code ]
+        redsys_api_return_code_idx:
+            columns: [ return_code ]
 
     fields:
         orderId:
@@ -23,7 +27,8 @@ PaymentSuite\RedsysApiBundle\Entity\Transaction:
             type: integer
         transactionType:
             column: transaction_type
-            type: smallint
+            type: string
+            length: 2
             nullable: false
         returnCode:
             column: return_code

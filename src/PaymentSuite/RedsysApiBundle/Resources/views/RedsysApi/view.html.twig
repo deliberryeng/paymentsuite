@@ -9,25 +9,26 @@
 
         <div class="form-row">
             <label>
-                <span>Card number</span>
-                {{ form_widget(redsys_api_form.credit_cart, {'attr': {'data-stripe': 'number'}}) }}
+                <span>{{ form_label(redsys_api_form.credit_card) }}</span>
+                {{ form_errors(redsys_api_form.credit_card) }}
+                {{ form_widget(redsys_api_form.credit_card) }}
             </label>
         </div>
 
         <div class="form-row">
             <label>
-                <span>CVC</span>
-                {{ form_widget(redsys_api_form.credit_cart_security, {'attr': {'data-stripe': 'cvc'}}) }}
+                <span>{{ form_label(redsys_api_form.credit_cart_security) }}</span>
+                {{ form_widget(redsys_api_form.credit_cart_security) }}
             </label>
         </div>
 
         <div class="form-row">
             <label>
                 <span>Expiration (MM/YYYY)</span>
-                {{ form_widget(redsys_api_form.credit_cart_expiration_month, {'attr': {'data-stripe': 'exp-month'}}) }}
+                {{ form_widget(redsys_api_form.credit_cart_expiration_month) }}
             </label>
             <span> / </span>
-            {{ form_widget(redsys_api_form.credit_cart_expiration_year, {'attr': {'data-stripe': 'exp-year'}}) }}
+            {{ form_widget(redsys_api_form.credit_cart_expiration_year) }}
         </div>
 
         <button type="submit" id="payment-submit">Submit Payment</button>

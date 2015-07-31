@@ -320,6 +320,7 @@ EOL;
         ObjectManager $transactionObjectManager,
         ObjectRepository $transactionRepository,
         $apiEndpoint,
+        $operationMode,
         $merchantCode,
         $merchantSecretKey,
         $merchantTerminal,
@@ -331,15 +332,16 @@ EOL;
         $this->transactionObjectManager = $transactionObjectManager;
         $this->transactionRepository = $transactionRepository;
         $this->apiEndpoint = $apiEndpoint;
+        /*
+         * When not using 'A' (automatic auth+capture) operation mode, we
+         * want to separate authorization from payment capture (aka "two
+         * step payment")
+         */
+        $this->transactionType = $operationMode == 'capture' ? 'A' : '1';
         $this->merchantCode = $merchantCode;
         $this->merchantSecretKey = $merchantSecretKey;
         $this->merchantTerminal = $merchantTerminal;
         $this->currency = $currency;
-
-        /*
-         * Old format, migrate
-         */
-        $this->transactionType = 'A';
     }
 
     /**
@@ -457,16 +459,16 @@ EOL;
         $transactionData = $this->getResponseData($resource);
 
         $returnCode =
-            isset($transactionData['Ds_Response'])
-                ? $transactionData['Ds_Response'] : "";
+            isset($transactionData['DS_RESPONSE'])
+                ? $transactionData['DS_RESPONSE'] : "";
 
         $errorCode =
             isset($transactionData['CODIGO'])
                 ? $transactionData['CODIGO'] : "";
 
         $authorizationCode =
-            isset($transactionData['Ds_AuthorisationCode'])
-                ? $transactionData['Ds_AuthorisationCode'] : "";
+            isset($transactionData['DS_AUTHORISATIONCODE'])
+                ? $transactionData['DS_AUTHORISATIONCODE'] : "";
 
         /**
          * this is a RESPONSE for the moment
@@ -474,7 +476,7 @@ EOL;
         $transaction = new Transaction(
             $this->paymentBridge->getOrderId(),
             $this->paymentBridge->getAmount(),
-            1,
+            $this->transactionType,
             $returnCode,
             $errorCode,
             $authorizationCode,

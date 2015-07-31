@@ -49,6 +49,7 @@ class RedsysApiController extends Controller
 
         try {
             if (!$form->isValid()) {
+
                 throw new PaymentException();
             }
 
@@ -91,7 +92,7 @@ class RedsysApiController extends Controller
     {
         $paymentMethod = new RedsysApiMethod();
         $paymentMethod
-            ->setCreditCartNumber($data['credit_cart'])
+            ->setCreditCartNumber($data['credit_card'])
             ->setCreditCartExpirationMonth($data['credit_cart_expiration_month'])
             ->setCreditCartExpirationYear($data['credit_cart_expiration_year'])
             ->setCreditCartSecurity($data['credit_cart_security']);
