@@ -18,7 +18,7 @@ use Doctrine\Common\Persistence\ObjectRepository;
 use Elcodi\Component\Core\Services\ObjectDirector;
 use PaymentSuite\PaymentCoreBundle\Exception\PaymentException;
 use PaymentSuite\PaymentCoreBundle\PaymentMethodInterface;
-use PaymentSuite\PaymentCoreBundle\Services\Interfaces\PaymentBridgeInterface;
+use PaymentSuite\RedsysApiBundle\Services\Interfaces\PaymentBridgeRedsysApiInterface;
 use PaymentSuite\PaymentCoreBundle\Services\PaymentEventDispatcher;
 use PaymentSuite\RedsysApiBundle\Entity\Transaction;
 use PaymentSuite\RedsysApiBundle\RedsysApiMethod;
@@ -78,7 +78,7 @@ class RedsysApiManager
     protected $eventDispatcher;
 
     /**
-     * @var PaymentBridgeInterface
+     * @var PaymentBridgeRedsysApiInterface
      */
     protected $paymentBridge;
 
@@ -345,7 +345,7 @@ EOL;
      */
     public function __construct(
         PaymentEventDispatcher $eventDispatcher,
-        PaymentBridgeInterface $paymentBridge,
+        PaymentBridgeRedsysApiInterface $paymentBridge,
         ObjectManager $transactionObjectManager,
         ObjectRepository $transactionRepository,
         $apiEndpoint,
@@ -426,6 +426,9 @@ EOL;
             );
 
         if (!$this->isAuthorized($r)) {
+            $this->paymentBridge->setError($this->getError($r));
+            $this->paymentBridge->setErrorCode($this->getErrorCode($r));
+
             /**
              * The payment was not successful
              */
@@ -436,7 +439,7 @@ EOL;
                     $method
                 );
 
-            throw new PaymentException($this->getError($r));
+            throw new PaymentException($this->getErrorCode($r));
         }
 
         /*
@@ -522,7 +525,6 @@ EOL;
         $method = new RedsysApiMethod();
 
         try {
-
             $r = $this->_callSoap();
 
         } catch (\Exception $e) {
@@ -545,8 +547,11 @@ EOL;
             );
 
         if (!$this->isAuthorized($r)) {
+            $this->paymentBridge->setError($this->getError($r));
+            $this->paymentBridge->setErrorCode($this->getErrorCode($r));
 
             $method->setTransactionResponse($this->getError($r));
+
             /* Payment capture has been refused */
             $this
                 ->eventDispatcher
@@ -554,6 +559,8 @@ EOL;
                     $this->paymentBridge,
                     $method
                 );
+
+            throw new PaymentException($this->getErrorCode($r));
 
         } else {
             /**
@@ -566,7 +573,6 @@ EOL;
                     $method
                 );
         }
-
     }
 
 
@@ -797,6 +803,26 @@ EOL;
 
             if (isset($data['CODIGO']))
                 return $this->errors[$data['CODIGO']];
+        }
+
+        return false;
+    }
+
+    /**
+     * Return ErrorCode
+     *
+     * @param $response
+     *
+     * @return bool
+     */
+    protected function getErrorCode($response)
+    {
+        if (!$this->isAuthorized($response)) {
+            $data = $this->getResponseData($response);
+
+            if (isset($data['CODIGO'])) {
+                return $data['CODIGO'];
+            }
         }
 
         return false;
