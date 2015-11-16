@@ -682,41 +682,6 @@ EOL;
     }
 
     /**
-     * @param $paymentData
-     *
-     * @return string
-     */
-    protected function setCapture($paymentData)
-    {
-        foreach ($paymentData as $field => $value) {
-            $this->$field = $value;
-        }
-
-        $redsysUniqueTransactionId = $this->generateUniqueTransactionId();
-
-        $entryData = sprintf(
-            self::CAPTURE_MESSAGE,
-            $this->paymentBridge->getAmount(),
-            $redsysUniqueTransactionId,
-            $this->merchantCode,
-            $this->currency,
-            $this->transactionType,
-            $this->merchantTerminal
-        );
-
-        $this->response = sprintf(
-            self::ROOT_MESSAGE,
-            $entryData,
-            $this->signTransactionMac256(
-                $redsysUniqueTransactionId,
-                $entryData
-            )
-        );
-
-        return $redsysUniqueTransactionId;
-    }
-
-    /**
      * @param $orderData
      *
      * @return string
@@ -779,19 +744,6 @@ EOL;
         switch ($transactionType) {
 
             case self::PAYMENT:
-//                $signature = sprintf(
-//                    '%s%s%s%s%s%s%s%s',
-//                    $amount,
-//                    $redsysUniqueTransactionId,
-//                    $this->merchantCode,
-//                    $this->currency,
-//                    $this->number,
-//                    $this->cvc,
-//                    $this->transactionType,
-//                    $this->merchantSecretKey
-//                );
-//                $signature = $this->createMerchantSignatureHostToHost($redsysUniqueTransactionId);
-                $signature = $this->createMerchantSignatureResponseHostToHost($this->merchantSecretKey, $this->response, $redsysUniqueTransactionId);
                 break;
 
             case self::CAPTURE:
@@ -823,70 +775,6 @@ EOL;
         $key = mcrypt_encrypt(MCRYPT_3DES, $key, $redsysUniqueTransactionId, MCRYPT_MODE_CBC, $iv);
 
         return base64_encode(hash_hmac('sha256', $entryData, $key, true));
-    }
-
-    function createMerchantSignatureHostToHost($key, $ent){
-        dump($this->getOrder($ent));
-        // Se decodifica la clave Base64
-        $key = $this->decodeBase64($key);
-        // Se diversifica la clave con el Número de Pedido
-        $key = $this->encrypt_3DES($this->getOrder($ent), $key);
-        // MAC256 del parámetro Ds_MerchantParameters
-        $res = $this->mac256($ent, $key);
-        // Se codifican los datos Base64
-        return $this->encodeBase64($res);
-    }
-
-    function createMerchantSignatureResponseHostToHost($key, $datos, $numPedido){
-        // Se decodifica la clave Base64
-        $key = $this->decodeBase64($key);
-        // Se diversifica la clave con el Número de Pedido
-        $key = $this->encrypt_3DES($numPedido, $key);
-        // MAC256 del parámetro Ds_Parameters que envía Redsys
-        $res = $this->mac256($datos, $key);
-        // Se codifican los datos Base64
-        return $this->encodeBase64($res);
-    }
-
-    /******  Obtener Número de pedido ******/
-    function getOrder($datos){
-        $posPedidoIni = strrpos($datos, "<DS_MERCHANT_ORDER>");
-        $tamPedidoIni = strlen("<DS_MERCHANT_ORDER>");
-        $posPedidoFin = strrpos($datos, "</DS_MERCHANT_ORDER>");
-        return substr($datos,$posPedidoIni + $tamPedidoIni,$posPedidoFin - ($posPedidoIni + $tamPedidoIni));
-    }
-
-    /******  3DES Function  ******/
-    function encrypt_3DES($message, $key){
-        // Se establece un IV por defecto
-        $bytes = array(0,0,0,0,0,0,0,0); //byte [] IV = {0, 0, 0, 0, 0, 0, 0, 0}
-        $iv = implode(array_map("chr", $bytes)); //PHP 4 >= 4.0.2
-
-        // Se cifra
-        $ciphertext = mcrypt_encrypt(MCRYPT_3DES, $key, $message, MCRYPT_MODE_CBC, $iv); //PHP 4 >= 4.0.2
-        return $ciphertext;
-    }
-
-    /******  Base64 Functions  ******/
-    function base64_url_encode($input){
-        return strtr(base64_encode($input), '+/', '-_');
-    }
-    function encodeBase64($data){
-        $data = base64_encode($data);
-        return $data;
-    }
-    function base64_url_decode($input){
-        return base64_decode(strtr($input, '-_', '+/'));
-    }
-    function decodeBase64($data){
-        $data = base64_decode($data);
-        return $data;
-    }
-
-    /******  MAC Function ******/
-    function mac256($ent,$key){
-        $res = hash_hmac('sha256', $ent, $key, true);//(PHP 5 >= 5.1.2)
-        return $res;
     }
 
     /**
