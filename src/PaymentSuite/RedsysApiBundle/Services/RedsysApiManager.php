@@ -174,6 +174,7 @@ class RedsysApiManager
         "SIS0227" => "Valor del campo Ds_Merchan_TransactionDate no válido",
         "SIS0252" => "El comercio no permite el envío de tarjeta",
         "SIS0253" => "La tarjeta no cumple el check-digit",
+        "SIS0256" => "El comercio no puede realizar preautorizaciones",
         "SIS0261" => "Operación detenida por superar el control de restricciones en la entrada al TPV Virtual",
         "SIS0274" => "Tipo de operación desconocida o no permitida por esta entrada al TPV Virtual",
     );
@@ -202,6 +203,14 @@ class RedsysApiManager
      *
      * Payment XML template message
      */
+    const ROOT_MESSAGE = <<<'EOL'
+<REQUEST>
+        %s
+    <DS_SIGNATUREVERSION>HMAC_SHA256_V1</DS_SIGNATUREVERSION>
+    <DS_SIGNATURE>%s</DS_SIGNATURE>
+</REQUEST>
+EOL;
+
     const PAYMENT_MESSAGE = <<<'EOL'
 <DATOSENTRADA>
     <DS_MERCHANT_AMOUNT>%s</DS_MERCHANT_AMOUNT>
@@ -213,7 +222,6 @@ class RedsysApiManager
     <DS_MERCHANT_TRANSACTIONTYPE>%s</DS_MERCHANT_TRANSACTIONTYPE>
     <DS_MERCHANT_TERMINAL>%s</DS_MERCHANT_TERMINAL>
     <DS_MERCHANT_EXPIRYDATE>%s</DS_MERCHANT_EXPIRYDATE>
-    <DS_MERCHANT_MERCHANTSIGNATURE>%s</DS_MERCHANT_MERCHANTSIGNATURE>
 </DATOSENTRADA>
 EOL;
 
@@ -230,7 +238,6 @@ EOL;
     <DS_MERCHANT_CURRENCY>%s</DS_MERCHANT_CURRENCY>
     <DS_MERCHANT_TRANSACTIONTYPE>%s</DS_MERCHANT_TRANSACTIONTYPE>
     <DS_MERCHANT_TERMINAL>%s</DS_MERCHANT_TERMINAL>
-    <DS_MERCHANT_MERCHANTSIGNATURE>%s</DS_MERCHANT_MERCHANTSIGNATURE>
 </DATOSENTRADA>
 EOL;
 
@@ -247,7 +254,6 @@ EOL;
     <DS_MERCHANT_CURRENCY>%s</DS_MERCHANT_CURRENCY>
     <DS_MERCHANT_TRANSACTIONTYPE>%s</DS_MERCHANT_TRANSACTIONTYPE>
     <DS_MERCHANT_TERMINAL>%s</DS_MERCHANT_TERMINAL>
-    <DS_MERCHANT_MERCHANTSIGNATURE>%s</DS_MERCHANT_MERCHANTSIGNATURE>
 </DATOSENTRADA>
 EOL;
 
@@ -511,15 +517,23 @@ EOL;
          */
         $this->transactionType = 2;
 
-        $this->response = sprintf(
+        $entryData = sprintf(
             self::CAPTURE_MESSAGE,
             $amount,
             $redsysTransactionId,
             $this->merchantCode,
             $this->currency,
             $this->transactionType,
-            $this->merchantTerminal,
-            $this->signTransaction($redsysTransactionId, $amount, self::CAPTURE)
+            $this->merchantTerminal
+        );
+
+        $this->response = sprintf(
+            self::ROOT_MESSAGE,
+            $entryData,
+            $this->signTransactionMac256(
+                $redsysTransactionId,
+                $entryData
+            )
         );
 
         $method = new RedsysApiMethod();
@@ -642,7 +656,7 @@ EOL;
 
         $redsysUniqueTransactionId = $this->generateUniqueTransactionId();
 
-        $this->response = sprintf(
+        $entryData = sprintf(
             self::PAYMENT_MESSAGE,
             $this->paymentBridge->getAmount(),
             $redsysUniqueTransactionId,
@@ -652,8 +666,16 @@ EOL;
             $this->cvc,
             $this->transactionType,
             $this->merchantTerminal,
-            $this->expiration,
-            $this->signTransaction($redsysUniqueTransactionId, $this->paymentBridge->getAmount())
+            $this->expiration
+        );
+
+        $this->response = sprintf(
+            self::ROOT_MESSAGE,
+            $entryData,
+            $this->signTransactionMac256(
+                $redsysUniqueTransactionId,
+                $entryData
+            )
         );
 
         return $redsysUniqueTransactionId;
@@ -722,18 +744,7 @@ EOL;
         switch ($transactionType) {
 
             case self::PAYMENT:
-                $signature = sprintf(
-                    '%s%s%s%s%s%s%s%s',
-                    $amount,
-                    $redsysUniqueTransactionId,
-                    $this->merchantCode,
-                    $this->currency,
-                    $this->number,
-                    $this->cvc,
-                    $this->transactionType,
-                    $this->merchantSecretKey
-                );
-            break;
+                break;
 
             case self::CAPTURE:
             case self::REFUND:
@@ -746,10 +757,24 @@ EOL;
                     $this->transactionType,
                     $this->merchantSecretKey
                 );
-            break;
+                break;
         }
 
-        return strtoupper(sha1($signature));
+//        return strtoupper(sha1($signature));
+        return $signature;
+    }
+
+    private function signTransactionMac256($redsysUniqueTransactionId, $entryData)
+    {
+        $key = base64_decode($this->merchantSecretKey);
+
+        $bytes = array(0,0,0,0,0,0,0,0);
+        $iv = implode(array_map("chr", $bytes));
+
+        // Se cifra
+        $key = mcrypt_encrypt(MCRYPT_3DES, $key, $redsysUniqueTransactionId, MCRYPT_MODE_CBC, $iv);
+
+        return base64_encode(hash_hmac('sha256', $entryData, $key, true));
     }
 
     /**
