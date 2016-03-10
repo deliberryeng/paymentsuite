@@ -260,17 +260,17 @@ EOL;
     /**
      * @var string
      */
-    private $number;
+    protected $number;
 
     /**
      * @var string
      */
-    private $expiration;
+    protected $expiration;
 
     /**
      * @var string
      */
-    private $cvc;
+    protected $cvc;
 
     /**
      * @var string
@@ -290,42 +290,42 @@ EOL;
      * R – Initial authorization recurring deferred
      * S – Authorization successive recurring deferred
      */
-    private $transactionType;
+    protected $transactionType;
 
     /**
      * @var string
      *
      * The response message
      */
-    private $response;
+    protected $response;
 
     /**
      * @var string
      *
      * WSDL service endpoint
      */
-    private $apiEndpoint;
+    protected $apiEndpoint;
 
     /**
      * @var string
      *
      * Merchant code
      */
-    private $merchantCode;
+    protected $merchantCode;
 
     /**
      * @var string
      *
      * Merchant key
      */
-    private $merchantSecretKey;
+    protected $merchantSecretKey;
 
     /**
      * @var string
      *
      * Merchant terminal
      */
-    private $merchantTerminal;
+    protected $merchantTerminal;
 
     /**
      * @var string
@@ -337,7 +337,7 @@ EOL;
      *   GBP: 826
      *   JPY: 392
      */
-    private $currency;
+    protected $currency;
 
     /**
      * @param PaymentEventDispatcher $eventDispatcher
@@ -764,7 +764,7 @@ EOL;
         return $signature;
     }
 
-    private function signTransactionMac256($redsysUniqueTransactionId, $entryData)
+    protected function signTransactionMac256($redsysUniqueTransactionId, $entryData)
     {
         $key = base64_decode($this->merchantSecretKey);
 
