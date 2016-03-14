@@ -558,7 +558,6 @@ EOL;
             $r = $this->_callSoap();
 
         } catch (\Exception $e) {
-            dump($e);die();
             /* The Soap call failed */
             $this
                 ->eventDispatcher
