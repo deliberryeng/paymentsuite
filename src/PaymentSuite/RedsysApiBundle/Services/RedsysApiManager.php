@@ -183,6 +183,11 @@ class RedsysApiManager
         "SIS0261" => "Operación detenida por superar el control de restricciones en la entrada al TPV Virtual",
         "SIS0270" => "El comercio no puede realizar autorizaciones en diferido",
         "SIS0274" => "Tipo de operación desconocida o no permitida por esta entrada al TPV Virtual",
+        "SIS0298" => "El comercio no permite realizar operaciones de Tarjeta en Archivo",
+        "SIS0319" => "El comercio no pertenece al grupo especificado en Ds_Merchant_Group",
+        "SIS0321" => "La referencia indicada en Ds_Merchant_Identifier no está asociada al comercio",
+        "SIS0322" => "Error de formato en Ds_Merchant_Group",
+        "SIS0325" => "Se ha pedido no mostrar pantallas pero no se ha enviado ninguna referencia de tarjeta",
         "SIS0429" => "Error en la versión enviada por el comercio en el parámetro Ds_SignatureVersion",
         "SIS0432" => "Error FUC del comercio erróneo",
         "SIS0433" => "Error Terminal del comercio erróneo",
@@ -214,6 +219,8 @@ class RedsysApiManager
     const REFUND = 'refund';
     const CAPTURE = 'capture';
 
+    const IDENTIFIER_REQUIRED = 'REQUIRED';
+
     /**
      * @var string
      *
@@ -238,6 +245,7 @@ EOL;
     <DS_MERCHANT_TRANSACTIONTYPE>%s</DS_MERCHANT_TRANSACTIONTYPE>
     <DS_MERCHANT_TERMINAL>%s</DS_MERCHANT_TERMINAL>
     <DS_MERCHANT_EXPIRYDATE>%s</DS_MERCHANT_EXPIRYDATE>
+    <DS_MERCHANT_IDENTIFIER>%s</DS_MERCHANT_IDENTIFIER>
 </DATOSENTRADA>
 EOL;
 
@@ -287,6 +295,16 @@ EOL;
      * @var string
      */
     protected $cvc;
+
+    /**
+     * @var boolean
+     */
+    protected $saveCard;
+
+    /**
+     * @var string
+     */
+    protected $cardIdentifier;
 
     /**
      * @var string
@@ -415,7 +433,10 @@ EOL;
                 str_pad($method->getCreditCartExpirationMonth(), 2, '0', STR_PAD_LEFT)
             ),
             'cvc' => $method->getCreditCartSecurity(),
-            'amount' => $amount
+            'amount' => $amount,
+            'saveCard' => $method->getSaveCard(),
+            'cardIdentifier' => 'c64f9ce7192b8ea574f9871e6fce8740d1c877fa'
+//            'cardIdentifier' => $method->getCardIdentifier()
         );
 
         $this->setPayment($paymentData);
@@ -740,7 +761,7 @@ EOL;
         $response = $soapClient->trataPeticion(
             array('datoEntrada' => $this->response)
         );
-
+dump($response);die();
         return $response;
 
     }

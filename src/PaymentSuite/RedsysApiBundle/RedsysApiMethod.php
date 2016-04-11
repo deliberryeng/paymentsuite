@@ -66,6 +66,16 @@ class RedsysApiMethod implements PaymentMethodInterface
     private $creditCartSecurity;
 
     /**
+     * @var bool
+     */
+    private $saveCard = false;
+
+    /**
+     * @var string
+     */
+    private $cardIdentifier;
+
+    /**
      * @var integer
      *
      * Redsys API transaction id
@@ -289,4 +299,43 @@ class RedsysApiMethod implements PaymentMethodInterface
         return $this->transactionStatus;
     }
 
+    /**
+     * @return boolean
+     */
+    public function getSaveCard()
+    {
+        return $this->saveCard;
+    }
+
+    /**
+     * @param boolean $saveCard
+     *
+     * @return $this
+     */
+    public function setSaveCard($saveCard)
+    {
+        $this->saveCard = $saveCard;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getCardIdentifier()
+    {
+        return $this->cardIdentifier;
+    }
+
+    /**
+     * @param string $cardIdentifier
+     *
+     * @return $this
+     */
+    public function setCardIdentifier($cardIdentifier)
+    {
+        $this->cardIdentifier = $cardIdentifier;
+
+        return $this;
+    }
 }
