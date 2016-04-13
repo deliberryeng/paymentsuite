@@ -435,8 +435,7 @@ EOL;
             'cvc' => $method->getCreditCartSecurity(),
             'amount' => $amount,
             'saveCard' => $method->getSaveCard(),
-            'cardIdentifier' => 'c64f9ce7192b8ea574f9871e6fce8740d1c877fa'
-//            'cardIdentifier' => $method->getCardIdentifier()
+            'cardIdentifier' => $method->getCardIdentifier()
         );
 
         $this->setPayment($paymentData);
@@ -444,7 +443,6 @@ EOL;
         try {
 
             $r = $this->_callSoap();
-
         } catch (\Exception $e) {
             /*
              * The Soap call failed
@@ -495,6 +493,10 @@ EOL;
             ->setTransactionId($transaction['DS_AUTHORISATIONCODE'])
             ->setTransactionStatus('paid')
             ->setTransactionResponse($transaction);
+
+        if (isset($transaction['DS_MERCHANT_IDENTIFIER'])) {
+            $method->setCardIdentifier($transaction['DS_MERCHANT_IDENTIFIER']);
+        }
 
         $this
             ->eventDispatcher
@@ -761,7 +763,7 @@ EOL;
         $response = $soapClient->trataPeticion(
             array('datoEntrada' => $this->response)
         );
-dump($response);die();
+
         return $response;
 
     }
