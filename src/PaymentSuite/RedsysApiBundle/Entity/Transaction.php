@@ -187,4 +187,84 @@ class Transaction
         return $this->message;
     }
 
+    /**
+     * @param string $redsysUniqueTransactionId
+     * @return Transaction
+     */
+    public function setRedsysUniqueTransactionId($redsysUniqueTransactionId)
+    {
+        $this->redsysUniqueTransactionId = $redsysUniqueTransactionId;
+        return $this;
+    }
+
+    /**
+     * @param string $orderId
+     * @return Transaction
+     */
+    public function setOrderId($orderId)
+    {
+        $this->orderId = $orderId;
+        return $this;
+    }
+
+    /**
+     * @param int $amount
+     * @return Transaction
+     */
+    public function setAmount($amount)
+    {
+        $this->amount = $amount;
+        return $this;
+    }
+
+    /**
+     * @param string $transactionType
+     * @return Transaction
+     */
+    public function setTransactionType($transactionType)
+    {
+        $this->transactionType = $transactionType;
+        return $this;
+    }
+
+    /**
+     * @param string $returnCode
+     * @return Transaction
+     */
+    public function setReturnCode($returnCode)
+    {
+        $this->returnCode = $returnCode;
+        return $this;
+    }
+
+    /**
+     * @param string $errorCode
+     * @return Transaction
+     */
+    public function setErrorCode($errorCode)
+    {
+        $this->errorCode = $errorCode;
+        return $this;
+    }
+
+    /**
+     * @param string $authorizationCode
+     * @return Transaction
+     */
+    public function setAuthorizationCode($authorizationCode)
+    {
+        $this->authorizationCode = $authorizationCode;
+        return $this;
+    }
+
+    /**
+     * @param string $message
+     * @return Transaction
+     */
+    public function setMessage($message)
+    {
+        $this->message = $message;
+        return $this;
+    }
+
 }
